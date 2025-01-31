@@ -5,9 +5,6 @@
 
 package meteordevelopment.meteorclient.utils.misc;
 
-import net.minecraft.world.dimension.DimensionTypes;
-import org.joml.Vector3d;
-
 public class PlayStatusEntry {
     public String name;
     public String playerName;

@@ -133,7 +133,6 @@ public class PlayStatus extends System<PlayStatus> {
                 .apiKey(this.apiKey)
                 .bodyJson(entry)
                 .send();
-            LOG.debug("Sent current play status");
         } catch (Exception e) {
             LOG.error(e.getMessage());
         }

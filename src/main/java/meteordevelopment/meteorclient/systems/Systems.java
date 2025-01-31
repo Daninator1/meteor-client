@@ -12,6 +12,7 @@ import meteordevelopment.meteorclient.systems.accounts.Accounts;
 import meteordevelopment.meteorclient.systems.config.Config;
 import meteordevelopment.meteorclient.systems.friends.Friends;
 import meteordevelopment.meteorclient.systems.friends.PlayStatus;
+import meteordevelopment.meteorclient.systems.friends.ServerSync;
 import meteordevelopment.meteorclient.systems.hud.Hud;
 import meteordevelopment.meteorclient.systems.macros.Macros;
 import meteordevelopment.meteorclient.systems.modules.Modules;
@@ -47,6 +48,7 @@ public class Systems {
         add(new Macros());
         add(new Friends());
         add(new PlayStatus());
+        add(new ServerSync());
         add(new Accounts());
         add(new Waypoints());
         add(new Profiles());

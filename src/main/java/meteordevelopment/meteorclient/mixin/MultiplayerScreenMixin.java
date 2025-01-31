@@ -5,37 +5,36 @@
 
 package meteordevelopment.meteorclient.mixin;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import meteordevelopment.meteorclient.gui.GuiThemes;
+import meteordevelopment.meteorclient.mixininterface.IServerListAdditionalMethods;
+import meteordevelopment.meteorclient.mixininterface.ISyncedServerInfo;
 import meteordevelopment.meteorclient.systems.config.Config;
+import meteordevelopment.meteorclient.systems.friends.ServerSync;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.systems.modules.misc.NameProtect;
 import meteordevelopment.meteorclient.systems.proxies.Proxies;
 import meteordevelopment.meteorclient.systems.proxies.Proxy;
 import meteordevelopment.meteorclient.utils.misc.PlayStatusSeparatorEntry;
 import meteordevelopment.meteorclient.utils.misc.PlayStatusServerEntry;
+import meteordevelopment.meteorclient.utils.network.MeteorExecutor;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerServerListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.network.LanServerInfo;
 import net.minecraft.client.network.ServerInfo;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.option.ServerList;
 import net.minecraft.text.Text;
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
-
-import java.util.function.Predicate;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
@@ -50,6 +49,8 @@ public abstract class MultiplayerScreenMixin extends Screen {
     @Shadow
     protected abstract void connect(ServerInfo entry);
 
+    @Shadow
+    private ServerList serverList;
     @Unique
     private int textColor1;
     @Unique
@@ -92,6 +93,42 @@ public abstract class MultiplayerScreenMixin extends Screen {
                 .size(75, 20)
                 .build()
         );
+    }
+
+    @Inject(method = "init", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/gui/screen/multiplayer/MultiplayerServerListWidget;setServers(Lnet/minecraft/client/option/ServerList;)V",
+        ordinal = 0,
+        shift = At.Shift.BEFORE))
+    private void onInitSyncServers(CallbackInfo info) {
+        if (!ServerSync.get().enabled) return;
+
+        var syncedServerInfos = ServerSync.get().getServers();
+
+        for (meteordevelopment.meteorclient.utils.misc.SyncedServerInfo syncedServerInfo : syncedServerInfos) {
+
+            var existingServerInfo = ((IServerListAdditionalMethods) this.serverList).get(syncedServerInfo.id);
+
+            if (existingServerInfo != null) {
+                existingServerInfo.name = syncedServerInfo.name;
+                existingServerInfo.address = syncedServerInfo.address;
+            } else {
+                var newServerInfo = new ServerInfo(syncedServerInfo.name, syncedServerInfo.address, ServerInfo.ServerType.OTHER);
+                ((ISyncedServerInfo) newServerInfo).setId(syncedServerInfo.id);
+                this.serverList.add(newServerInfo, false);
+            }
+        }
+
+        this.serverList.saveFile();
+    }
+
+    @Inject(method = "removeEntry", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/ServerList;remove(Lnet/minecraft/client/network/ServerInfo;)V"))
+    private void onRemoveEntry(boolean confirmedAction, CallbackInfo ci, @Local(ordinal = 0) MultiplayerServerListWidget.Entry entry) {
+        if (!ServerSync.get().enabled) return;
+
+        var serverInfo = ((MultiplayerServerListWidget.ServerEntry) entry).getServer();
+        var syncedServerInfo = (ISyncedServerInfo) serverInfo;
+
+        MeteorExecutor.execute(() -> ServerSync.get().removeServer(syncedServerInfo.getId()));
     }
 
     @Inject(method = "render", at = @At("TAIL"))

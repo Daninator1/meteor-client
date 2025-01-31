@@ -25,7 +25,7 @@ public class Tabs {
         add(new GuiTab());
         add(new HudTab());
         add(new FriendsTab());
-        add(new PlayStatusTab());
+        add(new ServerFeaturesTab());
         add(new MacrosTab());
         add(new ProfilesTab());
 
